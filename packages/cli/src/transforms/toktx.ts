@@ -103,8 +103,15 @@ export const toktx = function (options: ETC1SOptions | UASTCOptions): Transform 
 	return (doc: Document): void =>  {
 		const logger = doc.getLogger();
 
-		// Confirm recent version of KTX-Software is installed.
-		checkKTXSoftware(logger);
+		try {
+			// Confirm recent version of KTX-Software is installed.
+			checkKTXSoftware(logger);
+		} catch (err) {
+			// MP-HACK - non blocking, due to linux version errors noted
+			// - https://github.com/KhronosGroup/KTX-Software/issues/467
+			// - https://github.com/donmccurdy/glTF-Transform/issues/319
+			logger.warn('checkKTXSoftware: version issue downgraded to warning, see issue #319');
+		}
 
 		const basisuExtension = doc.createExtension(TextureBasisu).setRequired(true);
 
@@ -299,7 +306,7 @@ function checkKTXSoftware(logger: Logger): void {
 		.replace(/toktx\s+/, '').replace(/~\d+/, '').trim();
 
 	if (status !== 0 || !semver.valid(semver.clean(version))) {
-		throw new Error('Unable to find "toktx" version. Confirm KTX-Software is installed.');
+		throw new Error(`Unable to find "toktx" version. Confirm KTX-Software is installed. status: ${status}, version: ${version}`);
 	} else if (semver.lt(semver.clean(version), KTX_SOFTWARE_VERSION_MIN)) {
 		logger.warn(`Expected KTX-Software >= v${KTX_SOFTWARE_VERSION_MIN}, found ${version}.`);
 	} else {
